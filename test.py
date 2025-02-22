@@ -2,7 +2,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
@@ -12,13 +11,22 @@ y = "temp"
 z = "winddir"
 s = "sealevelpressure"
 
-df = pd.read_csv("data.csv")
-df["rain"] = (df["precip"] > 0).astype(int)
-df = df.sample(frac=1, random_state=42).reset_index(drop=True)
-df = df[[x, y, z, s, "rain"]]
+train_df = pd.read_csv("train.csv")
+test_df = pd.read_csv("test.csv")
 
-# Split data into train and test sets
-train_df, test_df = train_test_split(df, test_size=0.6, random_state=42)
+# Check if 'precip' column exists and create 'rain' column accordingly
+if 'precip' in train_df.columns:
+    train_df["rain"] = (train_df["precip"] > 0).astype(int)
+else:
+    train_df["rain"] = 0  # Default value if 'precip' column is missing
+
+if 'precip' in test_df.columns:
+    test_df["rain"] = (test_df["precip"] > 0).astype(int)
+else:
+    test_df["rain"] = 0  # Default value if 'precip' column is missing
+
+train_df = train_df[[x, y, z, s, "rain"]]
+test_df = test_df[[x, y, z, s, "rain"]]
 
 # Standardize features
 scaler = StandardScaler()
@@ -45,26 +53,19 @@ test_labels = test_labels.to(device)
 class SimpleNN(nn.Module):
     def __init__(self):
         super(SimpleNN, self).__init__()
-        self.fc1 = nn.Linear(4, 1000)  # Reduce the number of units
-        self.fc2 = nn.Linear(1000, 500)
-        self.fc3 = nn.Linear(500, 100)
-        self.fc4 = nn.Linear(100, 2)
-        self.drp = nn.Dropout(0.2)  # Increase the dropout rate
+        self.fc1 = nn.Linear(4, 5)  # Reduce the number of units
+        self.fc2 = nn.Linear(5, 2)
+        self.drp = nn.Dropout(0.1)  # Increase the dropout rate
     
     def forward(self, x):
         x = torch.relu(self.fc1(x))
-        x = self.drp(x)
-        x = torch.relu(self.fc2(x))
-        x = self.drp(x)
-        x = torch.relu(self.fc3(x))
-        x = self.drp(x)
-        x = self.fc4(x)
+        # x = self.drp(x)
+        x = self.fc2(x)
         return x
 
 # Initialize the model, loss function, and optimizer
 model = SimpleNN().to(device)
 criterion = nn.CrossEntropyLoss()
-# optimizer = optim.Adam(model.parameters(), lr=0.001)
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
 # Initialize variables for early stopping
@@ -73,7 +74,7 @@ patience = 10
 trigger_times = 0
 
 # Train the model on GPU with progress bar
-num_epochs = 500  # Reduce the number of epochs
+num_epochs = 20  # Reduce the number of epochs
 
 # Training loop with early stopping
 for epoch in range(num_epochs):
@@ -117,5 +118,5 @@ model.eval()
 with torch.no_grad():
     outputs = model(test_features)
     _, predicted = torch.max(outputs, 1)
-    accuracy = (predicted == test_labels).sum().item() / len(test_labels)
-    print(f'Final Accuracy: {accuracy:.4f}')
+    accuracy = (predicted == test_labels).sum().item() / len(test_labels) * 100
+    print(f'Final Accuracy: {accuracy:.2f}%')

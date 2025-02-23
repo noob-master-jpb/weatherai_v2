@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import warnings
 
 class Dataset():
-    def __init__(self,df,features,target,split=0.8,normalize=None,random_state=42):
+    def __init__(self, df, features, target, split=0.8, normalize=None, random_state=42):
         self.split = split
         self.normalize = normalize
         self.features = features
@@ -14,38 +16,27 @@ class Dataset():
         self.test_df = self.df.drop(self.train_df.index)
 
         if self.normalize:
-            self.normalize(method=self.normalize,features=self.features)
+            self.normalize(method=self.normalize, features=self.features)
 
+    def normalize_minimax(self, features=None):
+        if features is None:
+            features = self.features
+        minmax_scale = MinMaxScaler()
+        self.train_df[features] = minmax_scale.fit_transform(self.train_df[features])
+        self.test_df[features] = minmax_scale.transform(self.test_df[features])
+        print("Data normalized with minmax Normalization")
 
-    def normalize(self,method,features=None):
-
+    def normalize_zscore(self, features=None):
         if features is None:
             features = self.features
 
-        if method not in ("minimax","zscore","z-score","standered"):
-            raise ValueError("Invalid normalization method. Use 'minimax' or 'zscore'")
+        scaler = StandardScaler()
+        self.train_df[features] = scaler.fit_transform(self.train_df[features])
+        self.test_df[features] = scaler.transform(self.test_df[features])
+        print("Data normalized with z-score Normalization")
 
-        if self.normalize == None:
-            self.normalize=method
-
-        if method == "minimax":
-            self.min_vals = self.train_df[features].min()
-            self.max_vals = self.train_df[features].max()
-
-            self.train_df[features] = (self.train_df[features] - self.min_vals) / (self.max_vals - self.min_vals)
-            self.test_df[features] = (self.test_df[features] - self.min_vals) / (self.max_vals - self.min_vals)
-            print(f"Data normalized with {method} Normalization")
-
-        elif method in ("zscore","z-score","standered"):
-            self.mean = self.train_df[features].mean()
-            self.std = self.train_df[features].std()
-
-            self.train_df[features] = (self.train_df[features] - self.mean) / self.std
-            self.test_df[features] = (self.test_df[features] - self.mean) / self.std
-            print(f"Data normalized with {method} Normalization")
-
-    def df_selector(self,dataset=None):
-        if dataset not in (None,"all","train","test"):
+    def df_selector(self, dataset=None):
+        if dataset not in (None, "all", "train", "test"):
             print("Invalid dataset use train or test or all(default)")
             return
         
@@ -57,41 +48,46 @@ class Dataset():
             df = self.test_df
 
         return df
-            
 
-    def skewness(self,features=None,dataset=None):
+    def skewness(self, features=None, dataset=None):
         if features is None:
             features = self.features
 
         df = self.df_selector(dataset=dataset)
-        if df == None:
+        if df is None:
             return
 
         skewness = df[features].skew()
         return skewness
     
-    def balance(self,features = None, dataset = None):
+    def balance(self, features=None, dataset=None):
         if features is None:
             features = self.features
 
         df = self.df_selector(dataset=dataset)
-        if df == None:
+        if df is None:
             return
-
 
         balance = df[self.target].value_counts()
         return balance
     
-    def outliers(self,features=None,dataset=None):
+    def outliers(self, feature, dataset=None,threshold=3,condition = ">"):
         if self.normalize:
-            print(f"Warning data is already normalised with {self.normalize}. outliers might be in accurate")
-
-        if features is None:
-            features = self.features
+            warnings.warn(f"Warning data is already normalized with {self.normalize}. Outliers might be inaccurate")
 
         df = self.df_selector(dataset=dataset)
-        if df == None:
+        if df is None:
             return
-        
+
+        if feature not in df.columns:
+            warnings.warn(f"Feature '{feature}' not found in the dataset.", UserWarning)
+            return
+
+
+        values = df[feature].values.reshape(-1, 1)
+        z_scores = np.abs(StandardScaler().fit_transform(values)).flatten()
+        mask = z_scores > threshold
         
 
+        outliers_df = df[mask]
+        return outliers_df

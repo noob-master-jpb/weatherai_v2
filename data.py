@@ -1,6 +1,4 @@
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import warnings
 
@@ -71,7 +69,7 @@ class Dataset():
         balance = df[self.target].value_counts()
         return balance
     
-    def outliers(self, feature, dataset=None,threshold=3,condition = ">"):
+    def outliers(self, feature, dataset=None,threshold=3):
         if self.normalize:
             warnings.warn(f"Warning data is already normalized with {self.normalize}. Outliers might be inaccurate")
 
@@ -87,7 +85,6 @@ class Dataset():
         values = df[feature].values.reshape(-1, 1)
         z_scores = np.abs(StandardScaler().fit_transform(values)).flatten()
         mask = z_scores > threshold
-        
-
         outliers_df = df[mask]
         return outliers_df
+

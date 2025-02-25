@@ -3,12 +3,25 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import warnings
 
 class Dataset():
-    def __init__(self, df, features, target, split=0.8, normalize=None, random_state=42):
+    def __init__(self, df, features, target, final_target=None, binary_out = True, split=0.8, normalize=None,drop_outliers=False, random_state=42):
+        df = df[features + [target]]
+
+        if final_target:
+            df = df.rename(columns={target: final_target})
+            target = final_target
+        
+        if binary_out:
+            df[target] = (df[target] != 0).astype(int)
+
+
         self.split = split
         self.normalize = normalize
         self.features = features
         self.target = target
         self.df = df[features + [target]]
+
+        if drop_outliers:
+            self.drop_outliers(features=self.features,dataset=self.df)
 
         self.train_df = self.df.sample(frac=split, random_state=random_state)
         self.test_df = self.df.drop(self.train_df.index)
@@ -69,9 +82,10 @@ class Dataset():
         balance = df[self.target].value_counts()
         return balance
     
-    def outliers(self, feature, dataset=None,threshold=3):
-        if self.normalize:
-            warnings.warn(f"Warning data is already normalized with {self.normalize}. Outliers might be inaccurate")
+    def outliers(self, feature, dataset=None,threshold=3,warnings = True):
+        if warnings:
+            if self.normalize:
+                warnings.warn(f"Warning data is already normalized with {self.normalize}. Outliers might be inaccurate")
 
         df = self.df_selector(dataset=dataset)
         if df is None:
@@ -88,3 +102,21 @@ class Dataset():
         outliers_df = df[mask]
         return outliers_df
 
+    def drop_outliers(self, features=None, dataset=None,verbose = False):
+        if features is None:
+            features = self.features
+
+        df = self.df_selector(dataset=dataset)
+        if df is None:
+            return
+
+        temp = {}
+
+        for i in tuple(features):
+            out = self.outliers(i)
+            temp[i] = out
+            df.drop(out.index,inplace = True)
+            if verbose:
+                print(f"dropped indices {out.index} from {i}")
+
+        return temp

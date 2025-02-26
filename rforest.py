@@ -6,9 +6,9 @@ dataset = Dataset(df=pd.read_csv('data.csv'),
                   target="precip",
                   final_target="rain",
                   binary_out=True,
-                  split=.8,
+                  split=.99,
                   drop_outliers=True,
                   normalize="minmax",
                   )
 
-print
+print(dataset.test_df)

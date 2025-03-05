@@ -35,7 +35,8 @@ class Dataset():
                 self.normalize_minimax()
             elif self.normalize == "zscore":
                 self.normalize_zscore()
-            warnings.warn(f"Unknown normalization method: {self.normalize}", UserWarning)
+            else:
+                warnings.warn(f"Unknown normalization method: {self.normalize}", UserWarning)
 
     def normalize_minimax(self, features=None):
         if features is None:

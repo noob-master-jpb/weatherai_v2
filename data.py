@@ -1,9 +1,8 @@
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import warnings
-import pandas as pd
 
-df = pd.read_csv('data.csv')
+
 class Dataset():
     def __init__(self, df, features, target, final_target=None, binary_out = True, split=0.8, normalize=None,
                 drop_outliers=False, drop_duplicate=False, random_state=42):
